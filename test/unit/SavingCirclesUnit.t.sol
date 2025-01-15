@@ -168,7 +168,7 @@ contract SavingCirclesUnit is Test {
 
     vm.prank(alice);
     vm.expectRevert(abi.encodeWithSelector(ISavingCircles.NotCommissioned.selector));
-    savingCircles.withdrawable(nonExistentCircleId);
+    savingCircles.isWithdrawable(nonExistentCircleId);
 
     vm.prank(alice);
     vm.expectRevert(abi.encodeWithSelector(ISavingCircles.NotMember.selector));
@@ -257,13 +257,13 @@ contract SavingCirclesUnit is Test {
     assertEq(token.balanceOf(alice), withdrawAmount);
 
     // Verify all member balances were reset
-    (, uint256[] memory balances) = savingCircles.memberBalances(baseCircleId);
+    (, uint256[] memory balances) = savingCircles.getMemberBalances(baseCircleId);
     for (uint256 i = 0; i < balances.length; i++) {
       assertEq(balances[i], 0);
     }
 
     // Verify current index moved to next member
-    ISavingCircles.Circle memory circle = savingCircles.circle(baseCircleId);
+    ISavingCircles.Circle memory circle = savingCircles.getCircle(baseCircleId);
     assertEq(circle.currentIndex, 1);
   }
 
@@ -302,13 +302,13 @@ contract SavingCirclesUnit is Test {
     assertEq(token.balanceOf(alice), withdrawAmount);
 
     // Verify all member balances were reset
-    (, uint256[] memory balances) = savingCircles.memberBalances(baseCircleId);
+    (, uint256[] memory balances) = savingCircles.getMemberBalances(baseCircleId);
     for (uint256 i = 0; i < balances.length; i++) {
       assertEq(balances[i], 0);
     }
 
     // Verify current index moved to next member
-    ISavingCircles.Circle memory circle = savingCircles.circle(baseCircleId);
+    ISavingCircles.Circle memory circle = savingCircles.getCircle(baseCircleId);
     assertEq(circle.currentIndex, 1);
   }
 
@@ -316,11 +316,11 @@ contract SavingCirclesUnit is Test {
     uint256 nonExistentCircleId = uint256(keccak256(abi.encodePacked('Non Existent Circle')));
 
     vm.expectRevert(abi.encodeWithSelector(ISavingCircles.NotCommissioned.selector));
-    savingCircles.circle(nonExistentCircleId);
+    savingCircles.getCircle(nonExistentCircleId);
   }
 
   function test_CircleInfoWhenCircleAlreadyExists() external {
-    ISavingCircles.Circle memory _circle = savingCircles.circle(baseCircleId);
+    ISavingCircles.Circle memory _circle = savingCircles.getCircle(baseCircleId);
 
     assertEq(_circle.members.length, members.length);
     assertEq(_circle.token, address(token));
@@ -335,7 +335,7 @@ contract SavingCirclesUnit is Test {
     savingCircles.decommission(baseCircleId);
 
     vm.expectRevert(abi.encodeWithSelector(ISavingCircles.NotCommissioned.selector));
-    savingCircles.circle(baseCircleId);
+    savingCircles.getCircle(baseCircleId);
   }
 
   function test_DecommissionWhenNotMember() external {
@@ -363,7 +363,7 @@ contract SavingCirclesUnit is Test {
 
     // Verify circle was deleted
     vm.expectRevert(abi.encodeWithSelector(ISavingCircles.NotCommissioned.selector));
-    savingCircles.circle(baseCircleId);
+    savingCircles.getCircle(baseCircleId);
 
     // Verify alice got her deposit back
     assertEq(token.balanceOf(alice), DEPOSIT_AMOUNT);
