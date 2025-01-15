@@ -223,7 +223,7 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
    * @notice Check membership status for multiple circles
    * @param _member Address to check
    * @param _ids Array of circle IDs to check
-   * @return _statuses Array of boolean membership status
+   * @return _statuses Array of boolean membership statuses
    */
   function checkMemberships(address _member, uint256[] calldata _ids) external view returns (bool[] memory _statuses) {
     _statuses = new bool[](_ids.length);
