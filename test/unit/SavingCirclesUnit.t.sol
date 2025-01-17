@@ -13,9 +13,11 @@ import {ISavingCircles, SavingCircles} from 'contracts/SavingCircles.sol';
 /* solhint-disable func-name-mixedcase */
 
 contract SavingCirclesUnit is Test {
+  uint256 public constant BASE_CURRENT_INDEX = 0;
   uint256 public constant DEPOSIT_AMOUNT = 1 ether;
   uint256 public constant DEPOSIT_INTERVAL = 1 days;
   uint256 public constant CIRCLE_DURATION = 30 days;
+  uint256 public constant MAX_DEPOSITS = 1000;
 
   SavingCircles public savingCircles;
   MockERC20 public token;
@@ -65,12 +67,12 @@ contract SavingCirclesUnit is Test {
     baseCircle = ISavingCircles.Circle({
       owner: owner,
       members: members,
-      currentIndex: 0,
+      currentIndex: BASE_CURRENT_INDEX,
       circleStart: block.timestamp,
       token: address(token),
       depositAmount: DEPOSIT_AMOUNT,
       depositInterval: DEPOSIT_INTERVAL,
-      maxDeposits: 1000
+      maxDeposits: MAX_DEPOSITS
     });
 
     // Create an initial test circle
@@ -168,7 +170,7 @@ contract SavingCirclesUnit is Test {
 
     vm.prank(alice);
     vm.expectRevert(abi.encodeWithSelector(ISavingCircles.NotCommissioned.selector));
-    savingCircles.withdrawable(nonExistentCircleId);
+    savingCircles.isWithdrawable(nonExistentCircleId);
 
     vm.prank(alice);
     vm.expectRevert(abi.encodeWithSelector(ISavingCircles.NotMember.selector));
@@ -257,13 +259,13 @@ contract SavingCirclesUnit is Test {
     assertEq(token.balanceOf(alice), withdrawAmount);
 
     // Verify all member balances were reset
-    (, uint256[] memory balances) = savingCircles.memberBalances(baseCircleId);
+    (, uint256[] memory balances) = savingCircles.getMemberBalances(baseCircleId);
     for (uint256 i = 0; i < balances.length; i++) {
       assertEq(balances[i], 0);
     }
 
     // Verify current index moved to next member
-    ISavingCircles.Circle memory circle = savingCircles.circle(baseCircleId);
+    ISavingCircles.Circle memory circle = savingCircles.getCircle(baseCircleId);
     assertEq(circle.currentIndex, 1);
   }
 
@@ -302,13 +304,13 @@ contract SavingCirclesUnit is Test {
     assertEq(token.balanceOf(alice), withdrawAmount);
 
     // Verify all member balances were reset
-    (, uint256[] memory balances) = savingCircles.memberBalances(baseCircleId);
+    (, uint256[] memory balances) = savingCircles.getMemberBalances(baseCircleId);
     for (uint256 i = 0; i < balances.length; i++) {
       assertEq(balances[i], 0);
     }
 
     // Verify current index moved to next member
-    ISavingCircles.Circle memory circle = savingCircles.circle(baseCircleId);
+    ISavingCircles.Circle memory circle = savingCircles.getCircle(baseCircleId);
     assertEq(circle.currentIndex, 1);
   }
 
@@ -316,16 +318,32 @@ contract SavingCirclesUnit is Test {
     uint256 nonExistentCircleId = uint256(keccak256(abi.encodePacked('Non Existent Circle')));
 
     vm.expectRevert(abi.encodeWithSelector(ISavingCircles.NotCommissioned.selector));
-    savingCircles.circle(nonExistentCircleId);
+    savingCircles.getCircle(nonExistentCircleId);
   }
 
   function test_CircleInfoWhenCircleAlreadyExists() external {
-    ISavingCircles.Circle memory _circle = savingCircles.circle(baseCircleId);
+    ISavingCircles.Circle memory _circle = savingCircles.getCircle(baseCircleId);
 
-    assertEq(_circle.members.length, members.length);
+    // Verify all circle properties match expected values
+    assertEq(_circle.owner, owner);
+    assertEq(_circle.currentIndex, BASE_CURRENT_INDEX);
+    assertEq(_circle.circleStart, block.timestamp);
     assertEq(_circle.token, address(token));
     assertEq(_circle.depositAmount, DEPOSIT_AMOUNT);
     assertEq(_circle.depositInterval, DEPOSIT_INTERVAL);
+    assertEq(_circle.maxDeposits, MAX_DEPOSITS);
+
+    // Verify members array
+    assertEq(_circle.members.length, members.length);
+    for (uint256 i = 0; i < members.length; i++) {
+      assertEq(_circle.members[i], members[i]);
+    }
+
+    // Verify initial balances are zero
+    (, uint256[] memory balances) = savingCircles.getMemberBalances(baseCircleId);
+    for (uint256 i = 0; i < balances.length; i++) {
+      assertEq(balances[i], 0);
+    }
   }
 
   function test_DecommissionWhenOwner() external {
@@ -335,7 +353,7 @@ contract SavingCirclesUnit is Test {
     savingCircles.decommission(baseCircleId);
 
     vm.expectRevert(abi.encodeWithSelector(ISavingCircles.NotCommissioned.selector));
-    savingCircles.circle(baseCircleId);
+    savingCircles.getCircle(baseCircleId);
   }
 
   function test_DecommissionWhenNotMember() external {
@@ -363,7 +381,7 @@ contract SavingCirclesUnit is Test {
 
     // Verify circle was deleted
     vm.expectRevert(abi.encodeWithSelector(ISavingCircles.NotCommissioned.selector));
-    savingCircles.circle(baseCircleId);
+    savingCircles.getCircle(baseCircleId);
 
     // Verify alice got her deposit back
     assertEq(token.balanceOf(alice), DEPOSIT_AMOUNT);
@@ -408,5 +426,111 @@ contract SavingCirclesUnit is Test {
     vm.prank(alice);
     vm.expectRevert(abi.encodeWithSelector(ISavingCircles.InvalidCircle.selector));
     savingCircles.create(_invalidCircle);
+  }
+
+  function test_GetCircles() external {
+    // Create a second circle
+    ISavingCircles.Circle memory secondCircle = baseCircle;
+    secondCircle.owner = carol;
+    vm.prank(carol);
+    uint256 secondCircleId = savingCircles.create(secondCircle);
+
+    // Create array of circle IDs to fetch
+    uint256[] memory circleIds = new uint256[](2);
+    circleIds[0] = baseCircleId;
+    circleIds[1] = secondCircleId;
+
+    // Get circles
+    ISavingCircles.Circle[] memory circles = savingCircles.getCircles(circleIds);
+
+    // Verify first circle
+    assertEq(circles[0].owner, baseCircle.owner);
+    assertEq(circles[0].members.length, baseCircle.members.length);
+    assertEq(circles[0].currentIndex, baseCircle.currentIndex);
+    assertEq(circles[0].circleStart, baseCircle.circleStart);
+    assertEq(circles[0].token, baseCircle.token);
+    assertEq(circles[0].depositAmount, baseCircle.depositAmount);
+    assertEq(circles[0].depositInterval, baseCircle.depositInterval);
+    assertEq(circles[0].maxDeposits, baseCircle.maxDeposits);
+
+    // Verify second circle
+    assertEq(circles[1].owner, secondCircle.owner);
+    assertEq(circles[1].members.length, secondCircle.members.length);
+    assertEq(circles[1].currentIndex, secondCircle.currentIndex);
+    assertEq(circles[1].circleStart, secondCircle.circleStart);
+    assertEq(circles[1].token, secondCircle.token);
+    assertEq(circles[1].depositAmount, secondCircle.depositAmount);
+    assertEq(circles[1].depositInterval, secondCircle.depositInterval);
+    assertEq(circles[1].maxDeposits, secondCircle.maxDeposits);
+  }
+
+  function test_GetCirclesWhenCircleDoesNotExist() external {
+    // Create array with non-existent circle ID
+    uint256[] memory circleIds = new uint256[](1);
+    circleIds[0] = 999;
+
+    // Get circles
+    ISavingCircles.Circle[] memory circles = savingCircles.getCircles(circleIds);
+
+    // Verify returned circle is empty (owner address is 0)
+    assertEq(circles[0].owner, address(0));
+  }
+
+  function test_GetMemberCircles() external {
+    // Create a second circle that alice is also a member of
+    ISavingCircles.Circle memory secondCircle = baseCircle;
+    secondCircle.owner = carol;
+    vm.prank(carol);
+    uint256 secondCircleId = savingCircles.create(secondCircle);
+
+    // Get alice's circles
+    uint256[] memory aliceCircles = savingCircles.getMemberCircles(alice);
+
+    // Verify alice is in both circles
+    assertEq(aliceCircles.length, 2);
+    assertEq(aliceCircles[0], baseCircleId);
+    assertEq(aliceCircles[1], secondCircleId);
+
+    // Get bob's circles
+    uint256[] memory bobCircles = savingCircles.getMemberCircles(bob);
+
+    // Verify bob is in both circles
+    assertEq(bobCircles.length, 2);
+    assertEq(bobCircles[0], baseCircleId);
+    assertEq(bobCircles[1], secondCircleId);
+
+    // Get stranger's circles
+    uint256[] memory strangerCircles = savingCircles.getMemberCircles(STRANGER);
+
+    // Verify stranger is in no circles
+    assertEq(strangerCircles.length, 0);
+  }
+
+  function test_CheckMemberships() external {
+    // Create a second circle that alice is also a member of
+    ISavingCircles.Circle memory secondCircle = baseCircle;
+    secondCircle.owner = carol;
+    vm.prank(carol);
+    uint256 secondCircleId = savingCircles.create(secondCircle);
+
+    // Create array of circle IDs to check
+    uint256[] memory circleIds = new uint256[](3);
+    circleIds[0] = baseCircleId;
+    circleIds[1] = secondCircleId;
+    circleIds[2] = 999; // Non-existent circle
+
+    // Check memberships for alice who is in both circles
+    bool[] memory aliceStatuses = savingCircles.checkMemberships(alice, circleIds);
+    assertEq(aliceStatuses.length, 3);
+    assertTrue(aliceStatuses[0]); // In baseCircle
+    assertTrue(aliceStatuses[1]); // In secondCircle
+    assertFalse(aliceStatuses[2]); // Not in non-existent circle
+
+    // Check memberships for stranger who is in no circles
+    bool[] memory strangerStatuses = savingCircles.checkMemberships(STRANGER, circleIds);
+    assertEq(strangerStatuses.length, 3);
+    assertFalse(strangerStatuses[0]); // Not in baseCircle
+    assertFalse(strangerStatuses[1]); // Not in secondCircle
+    assertFalse(strangerStatuses[2]); // Not in non-existent circle
   }
 }

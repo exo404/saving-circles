@@ -19,9 +19,10 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
 
   uint256 public nextId;
   mapping(uint256 id => Circle circle) public circles;
-  mapping(address token => bool status) public allowedTokens;
   mapping(uint256 id => mapping(address token => uint256 balance)) public balances;
   mapping(uint256 id => mapping(address member => bool status)) public isMember;
+  mapping(address member => uint256[] ids) public memberCircles;
+  mapping(address token => bool status) public allowedTokens;
 
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
@@ -50,7 +51,9 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
       address _member = _circle.members[i];
       if (_member == address(0)) revert InvalidCircle();
       isMember[_id][_member] = true;
+      memberCircles[_member].push(_id);
     }
+
     circles[_id] = _circle;
 
     emit CircleCreated(_id, _circle.members, _circle.token, _circle.depositAmount, _circle.depositInterval);
@@ -133,6 +136,7 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
     for (uint256 i = 0; i < _circle.members.length; i++) {
       address _member = _circle.members[i];
       uint256 _balance = balances[_id][_member];
+
       if (_balance > 0) {
         balances[_id][_member] = 0;
         bool success = IERC20(_circle.token).transfer(_member, _balance);
@@ -159,7 +163,7 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
    * @param _id Identifier of the circle
    * @return _circle Saving circle
    */
-  function circle(uint256 _id) external view override returns (Circle memory _circle) {
+  function getCircle(uint256 _id) external view override returns (Circle memory _circle) {
     _circle = circles[_id];
 
     if (_isDecommissioned(_circle)) revert NotCommissioned();
@@ -168,12 +172,36 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
   }
 
   /**
+   * @notice Get multiple circles in a single call
+   * @param _ids Array of circle IDs to fetch
+   * @return _circles Array of circles
+   */
+  function getCircles(uint256[] calldata _ids) external view returns (Circle[] memory _circles) {
+    _circles = new Circle[](_ids.length);
+
+    for (uint256 i = 0; i < _ids.length; i++) {
+      _circles[i] = circles[_ids[i]];
+    }
+
+    return _circles;
+  }
+
+  /**
+   * @notice Get all circles for a specific member
+   * @param _member Address of the member
+   * @return _ids Array of circle IDs the member belongs to
+   */
+  function getMemberCircles(address _member) external view returns (uint256[] memory _ids) {
+    return memberCircles[_member];
+  }
+
+  /**
    * @notice Return the balances of the members of a specified saving circle
    * @param _id Identifier of the circle
    * @return _members Members of the specified saving circle
    * @return _balances Corresponding balances of the members of the circle
    */
-  function memberBalances(uint256 _id)
+  function getMemberBalances(uint256 _id)
     external
     view
     override
@@ -189,6 +217,22 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
     }
 
     return (_circle.members, _balances);
+  }
+
+  /**
+   * @notice Check membership status for multiple circles
+   * @param _member Address to check
+   * @param _ids Array of circle IDs to check
+   * @return _statuses Array of boolean membership statuses
+   */
+  function checkMemberships(address _member, uint256[] calldata _ids) external view returns (bool[] memory _statuses) {
+    _statuses = new bool[](_ids.length);
+
+    for (uint256 i = 0; i < _ids.length; i++) {
+      _statuses[i] = isMember[_ids[i]][_member];
+    }
+
+    return _statuses;
   }
 
   /**
@@ -209,7 +253,7 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
    * @param _id Identifier of the circle
    * @return bool If the circle is able to be withdrawn from
    */
-  function withdrawable(uint256 _id) external view override returns (bool) {
+  function isWithdrawable(uint256 _id) external view override returns (bool) {
     return _withdrawable(_id);
   }
 

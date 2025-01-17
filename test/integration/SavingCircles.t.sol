@@ -67,7 +67,7 @@ contract SavingCirclesIntegration is IntegrationBase {
     vm.prank(alice);
     circle.deposit(baseCircleId, DEPOSIT_AMOUNT);
 
-    (, uint256[] memory balances) = circle.memberBalances(baseCircleId);
+    (, uint256[] memory balances) = circle.getMemberBalances(baseCircleId);
     assertEq(balances[0], DEPOSIT_AMOUNT);
   }
 
@@ -78,7 +78,7 @@ contract SavingCirclesIntegration is IntegrationBase {
     vm.prank(bob);
     circle.depositFor(baseCircleId, DEPOSIT_AMOUNT, alice);
 
-    (, uint256[] memory balances) = circle.memberBalances(baseCircleId);
+    (, uint256[] memory balances) = circle.getMemberBalances(baseCircleId);
     assertEq(balances[0], DEPOSIT_AMOUNT);
   }
 
@@ -194,7 +194,7 @@ contract SavingCirclesIntegration is IntegrationBase {
 
     // Check circle deleted
     vm.expectRevert(ISavingCircles.NotCommissioned.selector);
-    circle.circle(baseCircleId);
+    circle.getCircle(baseCircleId);
   }
 
   function test_MemberDecommissionWhenIncompleteDeposits() public {
@@ -221,7 +221,7 @@ contract SavingCirclesIntegration is IntegrationBase {
 
     // Check circle was deleted
     vm.expectRevert(ISavingCircles.NotCommissioned.selector);
-    circle.circle(baseCircleId);
+    circle.getCircle(baseCircleId);
   }
 
   function test_RevertWhen_NonMemberDecommissions() public {
