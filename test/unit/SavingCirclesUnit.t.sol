@@ -132,7 +132,7 @@ contract SavingCirclesUnit is Test {
     savingCircles.deposit(baseCircleId, DEPOSIT_AMOUNT);
 
     // Second deposit attempt should fail since member has already deposited max amount
-    vm.expectRevert(abi.encodeWithSelector(ISavingCircles.InvalidDeposit.selector));
+    vm.expectRevert(abi.encodeWithSelector(ISavingCircles.ExceedsDepositAmount.selector));
     savingCircles.deposit(baseCircleId, DEPOSIT_AMOUNT);
     vm.stopPrank();
   }
@@ -161,7 +161,7 @@ contract SavingCirclesUnit is Test {
     vm.warp(block.timestamp + DEPOSIT_INTERVAL + 1);
 
     vm.prank(alice);
-    vm.expectRevert(abi.encodeWithSelector(ISavingCircles.InvalidDeposit.selector));
+    vm.expectRevert(abi.encodeWithSelector(ISavingCircles.DepositWindowClosed.selector));
     savingCircles.deposit(baseCircleId, DEPOSIT_AMOUNT);
   }
 
@@ -394,7 +394,7 @@ contract SavingCirclesUnit is Test {
     _invalidCircle.token = _notAllowedToken;
 
     vm.prank(alice);
-    vm.expectRevert(abi.encodeWithSelector(ISavingCircles.InvalidCircle.selector));
+    vm.expectRevert(abi.encodeWithSelector(ISavingCircles.TokenNotAllowed.selector));
     savingCircles.create(_invalidCircle);
   }
 
@@ -403,7 +403,7 @@ contract SavingCirclesUnit is Test {
     _invalidCircle.depositInterval = 0;
 
     vm.prank(alice);
-    vm.expectRevert(abi.encodeWithSelector(ISavingCircles.InvalidCircle.selector));
+    vm.expectRevert(abi.encodeWithSelector(ISavingCircles.InvalidDepositInterval.selector));
     savingCircles.create(_invalidCircle);
   }
 
@@ -412,7 +412,7 @@ contract SavingCirclesUnit is Test {
     _invalidCircle.depositAmount = 0;
 
     vm.prank(alice);
-    vm.expectRevert(abi.encodeWithSelector(ISavingCircles.InvalidCircle.selector));
+    vm.expectRevert(abi.encodeWithSelector(ISavingCircles.InvalidDepositAmount.selector));
     savingCircles.create(_invalidCircle);
   }
 
@@ -424,7 +424,7 @@ contract SavingCirclesUnit is Test {
     _invalidCircle.members = _oneMember;
 
     vm.prank(alice);
-    vm.expectRevert(abi.encodeWithSelector(ISavingCircles.InvalidCircle.selector));
+    vm.expectRevert(abi.encodeWithSelector(ISavingCircles.InvalidMemberCount.selector));
     savingCircles.create(_invalidCircle);
   }
 
