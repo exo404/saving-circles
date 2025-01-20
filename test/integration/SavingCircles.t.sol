@@ -57,7 +57,7 @@ contract SavingCirclesIntegration is IntegrationBase {
     address badToken = makeAddr('badToken');
     baseCircle.token = badToken;
     vm.prank(alice);
-    vm.expectRevert(abi.encodeWithSelector(ISavingCircles.InvalidCircle.selector));
+    vm.expectRevert(abi.encodeWithSelector(ISavingCircles.TokenNotAllowed.selector));
     circle.create(baseCircle);
   }
 

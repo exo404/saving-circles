@@ -41,15 +41,18 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
     _id = nextId++;
 
     if (circles[_id].owner != address(0)) revert AlreadyExists();
-    if (
-      !allowedTokens[_circle.token] || _circle.depositInterval == 0 || _circle.depositAmount == 0
-        || _circle.maxDeposits == 0 || _circle.circleStart == 0 || _circle.currentIndex != 0
-        || _circle.owner == address(0) || _circle.members.length < MINIMUM_MEMBERS
-    ) revert InvalidCircle();
+    if (!allowedTokens[_circle.token]) revert TokenNotAllowed();
+    if (_circle.depositInterval == 0) revert InvalidDepositInterval();
+    if (_circle.depositAmount == 0) revert InvalidDepositAmount();
+    if (_circle.maxDeposits == 0) revert InvalidMaxDeposits();
+    if (_circle.circleStart == 0) revert InvalidCircleStartTime();
+    if (_circle.currentIndex != 0) revert InvalidCurrentIndex();
+    if (_circle.owner == address(0)) revert InvalidOwner();
+    if (_circle.members.length < MINIMUM_MEMBERS) revert InvalidMemberCount();
 
     for (uint256 i = 0; i < _circle.members.length; i++) {
       address _member = _circle.members[i];
-      if (_member == address(0)) revert InvalidCircle();
+      if (_member == address(0)) revert InvalidMemberAddress();
       isMember[_id][_member] = true;
       memberCircles[_member].push(_id);
     }
@@ -292,12 +295,19 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
 
     if (_isDecommissioned(_circle)) revert NotCommissioned();
     if (!isMember[_id][_member]) revert NotMember();
-    if (
-      block.timestamp < circles[_id].circleStart
-        || block.timestamp >= circles[_id].circleStart + (circles[_id].depositInterval * (circles[_id].currentIndex + 1))
-        || block.timestamp >= circles[_id].circleStart + (circles[_id].depositInterval * circles[_id].maxDeposits)
-        || balances[_id][_member] + _value > circles[_id].depositAmount
-    ) revert InvalidDeposit();
+    if (block.timestamp < circles[_id].circleStart) {
+      revert DepositBeforeCircleStart();
+    }
+    if (block.timestamp >= circles[_id].circleStart + (circles[_id].depositInterval * (circles[_id].currentIndex + 1)))
+    {
+      revert DepositWindowClosed();
+    }
+    if (block.timestamp >= circles[_id].circleStart + (circles[_id].depositInterval * circles[_id].maxDeposits)) {
+      revert CircleExpired();
+    }
+    if (balances[_id][_member] + _value > circles[_id].depositAmount) {
+      revert ExceedsDepositAmount();
+    }
 
     balances[_id][_member] = balances[_id][_member] + _value;
 

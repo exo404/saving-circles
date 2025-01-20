@@ -42,6 +42,19 @@ interface ISavingCircles {
   error NotDecommissionable();
   error NotWithdrawable();
   error TransferFailed();
+  error DepositWindowClosed();
+  error CircleExpired();
+  error ExceedsDepositAmount();
+  error DepositBeforeCircleStart();
+  error TokenNotAllowed();
+  error InvalidDepositInterval();
+  error InvalidDepositAmount();
+  error InvalidMaxDeposits();
+  error InvalidCircleStartTime();
+  error InvalidCurrentIndex();
+  error InvalidOwner();
+  error InvalidMemberCount();
+  error InvalidMemberAddress();
 
   /*///////////////////////////////////////////////////////////////
                             VIEW
