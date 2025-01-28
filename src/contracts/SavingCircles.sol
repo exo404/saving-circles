@@ -133,10 +133,11 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
    * @dev Returns all deposits to members
    * @param _id Identifier of the circle
    */
-  function decommission(uint256 _id) external IsMember(_id) override {
+  function decommission(uint256 _id) external override {
     Circle storage _circle = circles[_id];
 
     if (_circle.owner != msg.sender) {
+      if(!isMember[_id][msg.sender]) revert NotMember();
       if (block.timestamp <= _circle.circleStart + (_circle.depositInterval * (_circle.currentIndex + 1))) {
         revert NotDecommissionable();
       }
