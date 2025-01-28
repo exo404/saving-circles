@@ -24,25 +24,26 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
   mapping(address member => uint256[] ids) public memberCircles;
   mapping(address token => bool status) public allowedTokens;
 
-  /// @custom:oz-upgrades-unsafe-allow constructor
-  constructor() {
-    _disableInitializers();
-  }
 
    /**
    * @dev Requires specified circle is commissioned by checking if an owner is set
    */
-  modifier isDecommissioned(uint256 _id){
-    require(!_isDecommissioned(circle[_id]), "NotCommissioned");
-      _;
+  modifier IsDecommissioned(uint256 _id){
+    if(_isDecommissioned(circles[_id])) revert NotCommissioned();
+    _;
   }
 
    /**
    * @dev Requires specified address is a member by checking the mapping
    */
-  modifier isMember(uint256 _id){
-    require(_isMember(_id, msg.sender), "NotMember");
-      _;
+  modifier IsMember(uint256 _id){
+    if(!isMember[_id][msg.sender]) revert NotMember();
+    _;
+  }
+
+  /// @custom:oz-upgrades-unsafe-allow constructor
+  constructor() {
+    _disableInitializers();
   }
 
   function initialize(address _owner) external override initializer {
