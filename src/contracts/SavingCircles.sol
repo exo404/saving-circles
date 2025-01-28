@@ -24,20 +24,19 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
   mapping(address member => uint256[] ids) public memberCircles;
   mapping(address token => bool status) public allowedTokens;
 
-
-   /**
+  /**
    * @dev Requires circle is commissioned by checking if an owner is set
    */
-  modifier circleDecomissioned(uint256 _id){
-    if(_isDecommissioned(circles[_id])) revert NotCommissioned();
+  modifier circleDecomissioned(uint256 _id) {
+    if (_isDecommissioned(circles[_id])) revert NotCommissioned();
     _;
   }
 
-   /**
-   * @dev Requires specified address is a member by checking the mapping
+  /**
+   * @dev Requires  address is a member by checking the mapping
    */
-  modifier notMember(uint256 _id){
-    if(!isMember[_id][msg.sender]) revert NotMember();
+  modifier notMember(uint256 _id) {
+    if (!isMember[_id][msg.sender]) revert NotMember();
     _;
   }
 
@@ -137,7 +136,7 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
     Circle storage _circle = circles[_id];
 
     if (_circle.owner != msg.sender) {
-      if(!isMember[_id][msg.sender]) revert NotMember();
+      if (!isMember[_id][msg.sender]) revert NotMember();
       if (block.timestamp <= _circle.circleStart + (_circle.depositInterval * (_circle.currentIndex + 1))) {
         revert NotDecommissionable();
       }
@@ -183,7 +182,7 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
    * @param _id Identifier of the circle
    * @return _circle Saving circle
    */
-  function getCircle(uint256 _id) external view circleDecomissioned(_id) override returns (Circle memory _circle) {
+  function getCircle(uint256 _id) external view override circleDecomissioned(_id) returns (Circle memory _circle) {
     _circle = circles[_id];
     return _circle;
   }
@@ -221,8 +220,8 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
   function getMemberBalances(uint256 _id)
     external
     view
-    circleDecomissioned(_id)
     override
+    circleDecomissioned(_id)
     returns (address[] memory _members, uint256[] memory _balances)
   {
     Circle memory _circle = circles[_id];
@@ -255,7 +254,7 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
    * @param _id Identifier of the circle
    * @return address Member that is currently able to withdraw from the circle
    */
-  function withdrawableBy(uint256 _id) external view circleDecomissioned(_id) override returns (address) {
+  function withdrawableBy(uint256 _id) external view override circleDecomissioned(_id) returns (address) {
     Circle memory _circle = circles[_id];
     return _circle.members[_circle.currentIndex];
   }
