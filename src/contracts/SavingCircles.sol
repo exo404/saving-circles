@@ -28,7 +28,7 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
    /**
    * @dev Requires specified circle is commissioned by checking if an owner is set
    */
-  modifier IsDecommissioned(uint256 _id){
+  modifier circleDecomissioned(uint256 _id){
     if(_isDecommissioned(circles[_id])) revert NotCommissioned();
     _;
   }
@@ -36,7 +36,7 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
    /**
    * @dev Requires specified address is a member by checking the mapping
    */
-  modifier IsMember(uint256 _id){
+  modifier notMember(uint256 _id){
     if(!isMember[_id][msg.sender]) revert NotMember();
     _;
   }
@@ -183,7 +183,7 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
    * @param _id Identifier of the circle
    * @return _circle Saving circle
    */
-  function getCircle(uint256 _id) external view IsDecommissioned(_id) override returns (Circle memory _circle) {
+  function getCircle(uint256 _id) external view circleDecomissioned(_id) override returns (Circle memory _circle) {
     _circle = circles[_id];
     return _circle;
   }
@@ -221,7 +221,7 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
   function getMemberBalances(uint256 _id)
     external
     view
-    IsDecommissioned(_id)
+    circleDecomissioned(_id)
     override
     returns (address[] memory _members, uint256[] memory _balances)
   {
@@ -255,7 +255,7 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
    * @param _id Identifier of the circle
    * @return address Member that is currently able to withdraw from the circle
    */
-  function withdrawableBy(uint256 _id) external view IsDecommissioned(_id) override returns (address) {
+  function withdrawableBy(uint256 _id) external view circleDecomissioned(_id) override returns (address) {
     Circle memory _circle = circles[_id];
     return _circle.members[_circle.currentIndex];
   }
@@ -273,7 +273,7 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
    * @dev Make a withdrawal from a specified circle
    *      A withdrawal must be made by a member of the circle, even if it is for another member.
    */
-  function _withdraw(uint256 _id, address _member) internal IsMember(_id) {
+  function _withdraw(uint256 _id, address _member) internal notMember(_id) {
     Circle storage _circle = circles[_id];
 
     if (!_withdrawable(_id)) revert NotWithdrawable();
@@ -298,7 +298,7 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
    *      A deposit must be made in specific time window and can be made partially so long as the final balance equals
    *      the specified deposit amount for the circle.
    */
-  function _deposit(uint256 _id, uint256 _value, address _member) internal IsDecommissioned(_id) IsMember(_id) {
+  function _deposit(uint256 _id, uint256 _value, address _member) internal circleDecomissioned(_id) notMember(_id) {
     Circle memory _circle = circles[_id];
 
     if (block.timestamp < circles[_id].circleStart) {
@@ -328,7 +328,7 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
    *      To be considered withdrawable, enough time must have passed since the deposit interval started
    *      and all members must have made a deposit.
    */
-  function _withdrawable(uint256 _id) internal view IsDecommissioned(_id) returns (bool) {
+  function _withdrawable(uint256 _id) internal view circleDecomissioned(_id) returns (bool) {
     Circle memory _circle = circles[_id];
 
     if (block.timestamp < _circle.circleStart + (_circle.depositInterval * _circle.currentIndex)) {
