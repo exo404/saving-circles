@@ -26,7 +26,7 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
 
 
    /**
-   * @dev Requires specified circle is commissioned by checking if an owner is set
+   * @dev Requires circle is commissioned by checking if an owner is set
    */
   modifier circleDecomissioned(uint256 _id){
     if(_isDecommissioned(circles[_id])) revert NotCommissioned();
