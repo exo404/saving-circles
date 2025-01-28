@@ -33,7 +33,7 @@ contract SavingCircles is ISavingCircles, ReentrancyGuard, OwnableUpgradeable {
   }
 
   /**
-   * @dev Requires  address is a member by checking the mapping
+   * @dev Requires address is a member by checking the mapping
    */
   modifier notMember(uint256 _id) {
     if (!isMember[_id][msg.sender]) revert NotMember();
